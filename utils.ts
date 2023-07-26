@@ -3,86 +3,86 @@ import crc32 from "crc-32";
 
 // Results
 export function fromOk(result): any {
-    // get the value from an ok result
-    return result.ok;
+  // get the value from an ok result
+  return result.ok;
 }
 
 export function fromErr(result): any {
-    // get the err from an error result
-    return Object.keys(result.err)[0];
+  // get the err from an error result
+  return Object.keys(result.err)[0];
 }
 
 export function isOk(result): boolean {
-    if (result) {
-        if ("ok" in result) {
-            return true;
-        }
-    }
-    return false;
+  if (result) {
+      if ("ok" in result) {
+          return true;
+      }
+  }
+  return false;
 }
 
 export function isErr(result): boolean {
-    if (result) {
-        if ("err" in result) {
-            return true;
-        }
-    }
-    return false;
+  if (result) {
+      if ("err" in result) {
+          return true;
+      }
+  }
+  return false;
 }
 
 export function fromVariantToString(v): string {
-    // A Motoko variant is stored in javascript as an
-    // object with a single property eg {"system": null}
-    return Object.keys(v)[0];
+  // A Motoko variant is stored in javascript as an
+  // object with a single property eg {"system": null}
+  return Object.keys(v)[0];
 }
 
 export function getVariantValue(v): any {
-    // A Motoko variant can be stored with a value, represented in javascript as an
-    // object with a single property eg {"system": possiblevalue }
-    // return the possible value
-    return Object.values(v)[0];
+  // A Motoko variant can be stored with a value, represented in javascript as an
+  // object with a single property eg {"system": possiblevalue }
+  // return the possible value
+  return Object.values(v)[0];
 }
 
 export const toNullable = <T>(value?: T): [] | [T] => {
-    return value ? [value] : [];
+  return value ? [value] : [];
 };
 
 export const fromNullable = <T>(value: [] | [T]): T | undefined => {
-    return value?.[0];
+  return value?.[0];
 };
 
 export type Time = bigint;
 
 export const fromTimestamp = (value: Time): Date => {
-    return new Date(Number(value) / 1000000);
+  return new Date(Number(value) / 1000000);
 };
 
 export const toTimestamp = (value: Date): Time => {
-    return BigInt(value.getTime());
+  return BigInt(value.getTime());
 };
 
 // from tipjar (https://github.com/ninegua/tipjar/blob/b68730fa85a6b3d46aa2173ddc9a9b268d1be45b/src/tipjar_assets/src/agent.js#L62)
 export function principalToAccountId(principal, subaccount) {
-    const shaObj = sha224.create();
-    shaObj.update("\x0Aaccount-id");
-    shaObj.update(principal.toUint8Array());
-    shaObj.update(subaccount ? subaccount : new Uint8Array(32));
-    const hash = new Uint8Array(shaObj.array());
-    const crc = crc32.buf(hash);
-    return toHexString([
-        (crc >> 24) & 0xff,
-        (crc >> 16) & 0xff,
-        (crc >> 8) & 0xff,
-        crc & 0xff,
-        ...hash,
-    ]);
+  const shaObj = sha224.create();
+  shaObj.update("\x0Aaccount-id");
+  shaObj.update(principal.toUint8Array());
+  shaObj.update(subaccount ? subaccount : new Uint8Array(32));
+  const hash = new Uint8Array(shaObj.array());
+  const crc = crc32.buf(hash);
+  return toHexString([
+    (crc >> 24) & 0xff,
+    (crc >> 16) & 0xff,
+    (crc >> 8) & 0xff,
+    crc & 0xff,
+    ...hash,
+  ]);
 }
 
 export function toHexString(byteArray: number[]) {
-    return Buffer.from(byteArray).toString("hex");
+  return Buffer.from(byteArray).toString("hex");
 }
 
 // truncate string
 export function truncate(str: string, n: number) {
-    return str.length > n ? str.slice(0, n - 1) + "…" : str;
+  return str.length > n ? str.slice(0, n - 1) + "…" : str;
 }

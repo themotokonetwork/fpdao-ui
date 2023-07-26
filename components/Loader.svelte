@@ -1,5 +1,5 @@
 <script lang="ts">
-  import spinner from "../assets/loading.gif";
+  import spinner from "../images/loading.gif";
 
   export let loading = true;
 </script>

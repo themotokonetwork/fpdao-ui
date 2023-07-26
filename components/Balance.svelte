@@ -1,6 +1,6 @@
 <script lang="ts">
   import { AuthStore } from '../auth-store';
-  import spinner from "../assets/loading.gif";
+  import spinner from "../images/loading.gif";
 
   export let authStore: AuthStore;
 </script>

@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { AuthStore } from '../auth-store';
 
-  import spinner from "../assets/loading.gif";
+  import spinner from "../images/loading.gif";
   import Button from "./Button.svelte";
 
   export let authStore: AuthStore;

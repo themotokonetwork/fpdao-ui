@@ -2,7 +2,7 @@
   import { AuthStore } from '../auth-store';
 
   import Button from "./Button.svelte";
-  import spinner from "../assets/loading.gif";
+  import spinner from "../images/loading.gif";
 
   export let authStore: AuthStore;
   export let loading;

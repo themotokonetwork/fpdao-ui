@@ -5,8 +5,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@dfinity/agent": "^0.15.7",
-    "@dfinity/candid": "^0.15.7",
+    "@dfinity/agent": "^0.18.1",
+    "@dfinity/candid": "^0.18.1",
     "@dfinity/nns": "^0.16.3",
     "@dfinity/principal": "^0.18.1",
     "crc-32": "^1.2.2",

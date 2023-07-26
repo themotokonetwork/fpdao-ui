@@ -1,4 +1,4 @@
-import { writable, get, Writable } from "svelte/store";
+import { writable, get, Writable, Readable, Updater } from "svelte/store";
 import type { Principal } from "@dfinity/principal";
 import { Actor, HttpAgent, Identity } from "@dfinity/agent";
 import { StoicIdentity } from "ic-stoic-identity";
@@ -26,8 +26,8 @@ export type AuthState = {
   balance: number;
 };
 
-export class AuthStore {
-  store: Writable<AuthState>;
+class AuthStoreClass implements Readable<AuthState> {
+  state: Writable<AuthState>;
   whitelist: string[] = [];
   host: string = '';
 
@@ -35,13 +35,13 @@ export class AuthStore {
     this.host = host || (process.env.DFX_NETWORK === "local" ? "http://localhost:4943" : "https://icp0.io");
     this.whitelist = whitelist || [];
 
-    this.store = writable<AuthState>(this.getDefaultState());
+    this.state = writable<AuthState>(this.getDefaultState());
   }
 
   getDefaultState(): AuthState {
     return {
       isAuthed: null,
-      extActor: createExtActor("", {
+      extActor: createExtActor(ledgerCanisterId, {
         agentOptions: { host: this.host },
       }),
       ledgerActor: createLedgerActor(ledgerCanisterId, {
@@ -54,15 +54,23 @@ export class AuthStore {
     };
   }
 
-  subscribe(fn) {
-    this.store.subscribe(fn);
-  };
+  subscribe(...args) {
+    return this.state.subscribe.call(this.state, ...args);
+  }
+
+  update(updater: Updater<AuthState>) {
+    return this.state.update(updater);
+  }
+
+  set(value: AuthState) {
+    return this.state.set(value);
+  }
 
   async checkConnections() {
     await this.checkStoicConnection();
     await this.checkPlugConnection();
     await this.checkBitfinityConnection();
-  };
+  }
 
   async checkStoicConnection() {
     StoicIdentity.load().then(async (identity) => {
@@ -71,7 +79,7 @@ export class AuthStore {
         await this.stoicConnect();
       }
     });
-  };
+  }
 
   async checkPlugConnection() {
     const connected = await window.ic?.plug?.isConnected();
@@ -79,7 +87,7 @@ export class AuthStore {
       console.log("plug connection detected");
       await this.plugConnect();
     }
-  };
+  }
 
   async checkBitfinityConnection() {
     const connected = await window.ic?.bitfinityWallet?.isConnected();
@@ -87,7 +95,7 @@ export class AuthStore {
       console.log("bitfinity connection detected");
       await this.bitfinityConnect();
     }
-  };
+  }
 
   async stoicConnect() {
     StoicIdentity.load().then(async (identity) => {
@@ -99,12 +107,12 @@ export class AuthStore {
       }
       this.initStoic(identity);
     });
-  };
+  }
 
   async initStoic(identity: Identity & { accounts(): string }) {
     console.trace("initStoic");
 
-    const extActor = createExtActor(collection.canisterId, {
+    const extActor = createExtActor(ledgerCanisterId, {
       agentOptions: {
         identity,
         host: this.host,
@@ -127,7 +135,7 @@ export class AuthStore {
     // accounts assocaited with the principal
     let accounts = JSON.parse(await identity.accounts());
 
-    this.store.update((state) => ({
+    this.state.update((state) => ({
       ...state,
       extActor,
       ledgerActor,
@@ -137,7 +145,7 @@ export class AuthStore {
     }));
 
     await this.updateBalance();
-  };
+  }
 
   async plugConnect() {
     // check if plug is installed in the browser
@@ -162,7 +170,7 @@ export class AuthStore {
     }
 
     await this.initPlug();
-  };
+  }
 
   async initPlug() {
     // check wether agent is present
@@ -194,7 +202,7 @@ export class AuthStore {
     }
 
     const extActor = (await window.ic?.plug.createActor({
-      canisterId: collection.canisterId,
+      canisterId: ledgerCanisterId,
       interfaceFactory: extIdlFactory,
     })) as typeof ext;
 
@@ -205,7 +213,7 @@ export class AuthStore {
 
     const principal = await window.ic.plug.agent.getPrincipal();
 
-    this.store.update((state) => ({
+    this.state.update((state) => ({
       ...state,
       extActor,
       principal,
@@ -216,7 +224,7 @@ export class AuthStore {
     await this.updateBalance();
 
     console.log("plug is authed");
-  };
+  }
 
   async bitfinityConnect() {
     // check if bitfinity is installed in the browser
@@ -238,11 +246,11 @@ export class AuthStore {
     }
 
     await this.initBitfinity();
-  };
+  }
 
   async initBitfinity() {
     const extActor = (await window.ic.bitfinityWallet.createActor({
-      canisterId: collection.canisterId,
+      canisterId: ledgerCanisterId,
       interfaceFactory: extIdlFactory,
       host: this.host,
     })) as typeof ext;
@@ -261,7 +269,7 @@ export class AuthStore {
     const principal = await window.ic.bitfinityWallet.getPrincipal();
     const accountId = await window.ic.bitfinityWallet.getAccountID();
 
-    this.store.update((state) => ({
+    this.state.update((state) => ({
       ...state,
       extActor,
       ledgerActor,
@@ -273,10 +281,10 @@ export class AuthStore {
     await this.updateBalance();
 
     console.log("bitfinity is authed");
-  };
+  }
 
   async updateBalance() {
-    const store = get({ subscribe: this.store.subscribe });
+    const store = get({ subscribe: this.state.subscribe });
     let balance: number = 0;
 
     if (store.isAuthed === "plug") {
@@ -305,11 +313,11 @@ export class AuthStore {
       }
     }
     console.log("balance", balance);
-    this.store.update((prevState) => ({ ...prevState, balance }));
+    this.state.update((prevState) => ({ ...prevState, balance }));
   }
 
   async transfer(toAddress: string, amount: bigint) {
-    const store = get({ subscribe: this.store.subscribe });
+    const store = get({ subscribe: this.state.subscribe });
 
     if (store.isAuthed === "plug") {
       let height = await window.ic.plug.requestTransfer({
@@ -337,7 +345,7 @@ export class AuthStore {
   }
 
   async disconnect() {
-    const store = get({ subscribe: this.store.subscribe });
+    const store = get({ subscribe: this.state.subscribe });
     if (store.isAuthed === "stoic") {
       StoicIdentity.disconnect();
     } else if (store.isAuthed === "plug") {
@@ -349,24 +357,13 @@ export class AuthStore {
 
     console.log("disconnected");
 
-    this.store.update((prevState) => {
+    this.state.update((prevState) => {
       return {
         ...this.getDefaultState(),
       };
     });
-  };
+  }
 }
-
-// export const HOST = process.env.DFX_NETWORK !== "ic" ? "http://localhost:4943" : "https://icp0.io";
-
-// export const store = createStore({
-//   whitelist: [
-//     collection.canisterId,
-//     ledgerCanisterId,
-//     // 'ryjl3-tyaaa-aaaaa-aaaba-cai',
-//   ],
-//   host: HOST,
-// });
 
 declare global {
   interface Window {
@@ -446,3 +443,9 @@ declare global {
     };
   }
 }
+
+export let createAuthStore = ({ host, whitelist }: { host?: string; whitelist?: string[]; }): AuthStore => {
+  return new AuthStoreClass({host, whitelist});
+}
+
+export type AuthStore = AuthStoreClass & Readable<AuthState>;
