@@ -3,6 +3,7 @@
   import Balance from "./Balance.svelte";
   import DarkMode from "./DarkMode.svelte";
   import Login from "./Login.svelte";
+  import Logo from './Logo.svelte';
   import Menu from "./Menu.svelte";
 
   export let authStore: AuthStore;
@@ -14,11 +15,7 @@
 <!-- mobile -->
 <div class="lg:hidden">
   <a href="/#">
-    <img
-      class="h-auto w-full dark:invert dark:border-none"
-      src={`/BP_FPDAO_Logo_BlackOnWhite_sRGB_${randomLogo}.svg`}
-      alt="fpdao logo"
-    />
+    <Logo></Logo>
   </a>
 </div>
 
@@ -29,11 +26,7 @@
     : ''}"
 >
   <a href="/#">
-    <img
-      class="h-auto max-h-28 w-full dark:invert dark:border-none"
-      src={`/BP_FPDAO_Logo_BlackOnWhite_sRGB_${randomLogo}.svg`}
-      alt="fpdao logo"
-    />
+    <Logo></Logo>
   </a>
   <div class="flex flex-row ">
     <!-- we create a separate div where the item algined is end -->
