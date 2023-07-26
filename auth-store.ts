@@ -4,11 +4,11 @@ import { Actor, HttpAgent, Identity } from "@dfinity/agent";
 import { StoicIdentity } from "ic-stoic-identity";
 import { AccountIdentifier } from "@dfinity/nns";
 import { InterfaceFactory } from "@dfinity/candid/lib/cjs/idl";
-import {
-  staging as ext,
-  createActor as createExtActor,
-  idlFactory as extIdlFactory,
-} from "./declarations/ext";
+// import {
+//   staging as ext,
+//   createActor as createExtActor,
+//   idlFactory as extIdlFactory,
+// } from "./declarations/ext";
 import {
   ledger,
   createActor as createLedgerActor,
@@ -18,8 +18,7 @@ import {
 
 export type AuthState = {
   isAuthed: "plug" | "stoic" | "bitfinity" | null;
-  extActor: typeof ext;
-  ledgerActor: typeof ledger;
+  // extActor: typeof ext;
   principal: Principal | null;
   accountId: string;
   isLoading: boolean;
@@ -30,23 +29,24 @@ class AuthStoreClass implements Readable<AuthState> {
   state: Writable<AuthState>;
   whitelist: string[] = [];
   host: string = '';
+  ledgerActor: typeof ledger;
 
   constructor({ host, whitelist }: { host?: string; whitelist?: string[]; }) {
     this.host = host || (process.env.DFX_NETWORK === "local" ? "http://localhost:4943" : "https://icp0.io");
     this.whitelist = whitelist || [];
 
     this.state = writable<AuthState>(this.getDefaultState());
+    this.ledgerActor = createLedgerActor(ledgerCanisterId, {
+      agentOptions: {host: this.host},
+    });
   }
 
   getDefaultState(): AuthState {
     return {
       isAuthed: null,
-      extActor: createExtActor(ledgerCanisterId, {
-        agentOptions: { host: this.host },
-      }),
-      ledgerActor: createLedgerActor(ledgerCanisterId, {
-        agentOptions: { host: this.host },
-      }),
+      // extActor: createExtActor(ledgerCanisterId, {
+      //   agentOptions: { host: this.host },
+      // }),
       principal: null,
       accountId: "",
       isLoading: false,
@@ -112,21 +112,22 @@ class AuthStoreClass implements Readable<AuthState> {
   async initStoic(identity: Identity & { accounts(): string }) {
     console.trace("initStoic");
 
-    const extActor = createExtActor(ledgerCanisterId, {
+    const extActor = true;
+    // const extActor = createExtActor(ledgerCanisterId, {
+    //   agentOptions: {
+    //     identity,
+    //     host: this.host,
+    //   },
+    // });
+
+    this.ledgerActor = createLedgerActor(ledgerCanisterId, {
       agentOptions: {
         identity,
         host: this.host,
       },
     });
 
-    const ledgerActor = createLedgerActor(ledgerCanisterId, {
-      agentOptions: {
-        identity,
-        host: this.host,
-      },
-    });
-
-    if (!extActor || !ledgerActor) {
+    if (!extActor || !this.ledgerActor) {
       console.warn("couldn't create actors");
       return;
     }
@@ -137,8 +138,7 @@ class AuthStoreClass implements Readable<AuthState> {
 
     this.state.update((state) => ({
       ...state,
-      extActor,
-      ledgerActor,
+      // extActor,
       principal: identity.getPrincipal(),
       accountId: accounts[0].address, // we take the default account associated with the identity
       isAuthed: "stoic",
@@ -201,10 +201,11 @@ class AuthStoreClass implements Readable<AuthState> {
       });
     }
 
-    const extActor = (await window.ic?.plug.createActor({
-      canisterId: ledgerCanisterId,
-      interfaceFactory: extIdlFactory,
-    })) as typeof ext;
+    const extActor = true;
+    // const extActor = (await window.ic?.plug.createActor({
+    //   canisterId: ledgerCanisterId,
+    //   interfaceFactory: extIdlFactory,
+    // })) as typeof ext;
 
     if (!extActor) {
       console.warn("couldn't create actors");
@@ -215,7 +216,7 @@ class AuthStoreClass implements Readable<AuthState> {
 
     this.state.update((state) => ({
       ...state,
-      extActor,
+      // extActor,
       principal,
       accountId: window.ic.plug.sessionManager.sessionData.accountId,
       isAuthed: "plug",
@@ -249,19 +250,20 @@ class AuthStoreClass implements Readable<AuthState> {
   }
 
   async initBitfinity() {
-    const extActor = (await window.ic.bitfinityWallet.createActor({
-      canisterId: ledgerCanisterId,
-      interfaceFactory: extIdlFactory,
-      host: this.host,
-    })) as typeof ext;
+    const extActor = true;
+    // const extActor = (await window.ic.bitfinityWallet.createActor({
+    //   canisterId: ledgerCanisterId,
+    //   interfaceFactory: extIdlFactory,
+    //   host: this.host,
+    // })) as typeof ext;
 
-    const ledgerActor = (await window.ic.bitfinityWallet.createActor({
+    this.ledgerActor = (await window.ic.bitfinityWallet.createActor({
       canisterId: ledgerCanisterId,
       interfaceFactory: ledgerIdlFactory,
       host: this.host,
     })) as typeof ledger;
 
-    if (!extActor || !ledgerActor) {
+    if (!extActor || !this.ledgerActor) {
       console.warn("couldn't create actors");
       return;
     }
@@ -271,8 +273,7 @@ class AuthStoreClass implements Readable<AuthState> {
 
     this.state.update((state) => ({
       ...state,
-      extActor,
-      ledgerActor,
+      // extActor,
       principal,
       accountId,
       isAuthed: "bitfinity",
@@ -294,13 +295,13 @@ class AuthStoreClass implements Readable<AuthState> {
         balance = ICP.amount;
       }
     } else if (store.isAuthed === "stoic") {
-      let res = await store.ledgerActor.account_balance({
+      let res = await this.ledgerActor.account_balance({
         account: AccountIdentifier.fromHex(store.accountId).toNumbers(),
       });
       balance = Number(res.e8s / 100000000n);
     } else if (store.isAuthed === "bitfinity") {
       if (process.env.DFX_NETWORK !== "ic") {
-        let res = await store.ledgerActor.account_balance({
+        let res = await this.ledgerActor.account_balance({
           account: AccountIdentifier.fromHex(store.accountId).toNumbers(),
         });
         balance = Number(res.e8s / 100000000n);
@@ -330,7 +331,7 @@ class AuthStoreClass implements Readable<AuthState> {
       console.log("sent", height);
     } else if (store.isAuthed === "stoic" || store.isAuthed === "bitfinity") {
       console.log("transfer...");
-      let res = await store.ledgerActor.transfer({
+      let res = await this.ledgerActor.transfer({
         from_subaccount: [],
         to: AccountIdentifier.fromHex(toAddress).toNumbers(),
         amount: { e8s: amount },
