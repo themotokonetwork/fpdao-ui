@@ -40,7 +40,7 @@
   ];
 
   // get random number between 1 and 18
-  let randomLogo = logos[Math.floor(Math.random() * logos.length) + 1];
+  let randomLogo = logos[Math.floor(Math.random() * logos.length)];
 </script>
 
 <img
