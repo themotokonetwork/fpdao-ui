@@ -1,24 +1,19 @@
-import { writable, get, Writable, Readable, Updater } from "svelte/store";
+import { writable, get, Writable, Readable, Updater, Subscriber, Invalidator, Unsubscriber } from "svelte/store";
 import type { Principal } from "@dfinity/principal";
 import { Actor, HttpAgent, Identity } from "@dfinity/agent";
 import { StoicIdentity } from "ic-stoic-identity";
 import { AccountIdentifier } from "@dfinity/nns";
 import { InterfaceFactory } from "@dfinity/candid/lib/cjs/idl";
-// import {
-//   staging as ext,
-//   createActor as createExtActor,
-//   idlFactory as extIdlFactory,
-// } from "./declarations/ext";
 import {
   ledger,
   createActor as createLedgerActor,
   idlFactory as ledgerIdlFactory,
   canisterId as ledgerCanisterId,
 } from "./declarations/ledger";
+import {createActor} from 'create-actor';
 
 export type AuthState = {
-  isAuthed: "plug" | "stoic" | "bitfinity" | null;
-  // extActor: typeof ext;
+  isAuthed: "stoic" | "plug" | "bitfinity" | null;
   principal: Principal | null;
   accountId: string;
   isLoading: boolean;
@@ -30,6 +25,7 @@ class AuthStoreClass implements Readable<AuthState> {
   whitelist: string[] = [];
   host: string = '';
   ledgerActor: typeof ledger;
+  stoicIdentity: Identity & { accounts(): string };
 
   constructor({ host, whitelist }: { host?: string; whitelist?: string[]; }) {
     this.host = host || (process.env.DFX_NETWORK === "local" ? "http://localhost:4943" : "https://icp0.io");
@@ -44,9 +40,6 @@ class AuthStoreClass implements Readable<AuthState> {
   getDefaultState(): AuthState {
     return {
       isAuthed: null,
-      // extActor: createExtActor(ledgerCanisterId, {
-      //   agentOptions: { host: this.host },
-      // }),
       principal: null,
       accountId: "",
       isLoading: false,
@@ -54,8 +47,8 @@ class AuthStoreClass implements Readable<AuthState> {
     };
   }
 
-  subscribe(...args) {
-    return this.state.subscribe.call(this.state, ...args);
+  subscribe(run: Subscriber<AuthState>, invalidate?: Invalidator<AuthState>): Unsubscriber {
+    return this.state.subscribe(run, invalidate);
   }
 
   update(updater: Updater<AuthState>) {
@@ -64,6 +57,40 @@ class AuthStoreClass implements Readable<AuthState> {
 
   set(value: AuthState) {
     return this.state.set(value);
+  }
+
+  // create an actor using the currently connected wallet
+  async createActor<T extends Actor>(canisterId: string, idlFactory: InterfaceFactory): Promise<T> {
+    const store = get({ subscribe: this.state.subscribe });
+
+    if (store.isAuthed === "stoic") {
+      return createActor(canisterId, idlFactory, {
+        agentOptions: {
+          identity: this.stoicIdentity,
+          host: this.host,
+        },
+      });
+    }
+    else if (store.isAuthed === "plug") {
+      return (await window.ic?.plug.createActor({
+        canisterId: ledgerCanisterId,
+        interfaceFactory: idlFactory,
+      })) as T;
+    }
+    else if (store.isAuthed === "bitfinity") {
+      return (await window.ic.bitfinityWallet.createActor({
+        canisterId: ledgerCanisterId,
+        interfaceFactory: idlFactory,
+        host: this.host,
+      })) as T;
+    }
+    else {
+      return createActor(canisterId, idlFactory, {
+        agentOptions: {
+          host: this.host,
+        },
+      });
+    }
   }
 
   async checkConnections() {
@@ -105,41 +132,33 @@ class AuthStoreClass implements Readable<AuthState> {
         // No existing connection, lets make one!
         identity = await StoicIdentity.connect();
       }
-      this.initStoic(identity);
+      this.stoicIdentity = identity;
+      this.initStoic();
     });
   }
 
-  async initStoic(identity: Identity & { accounts(): string }) {
+  async initStoic() {
     console.trace("initStoic");
-
-    const extActor = true;
-    // const extActor = createExtActor(ledgerCanisterId, {
-    //   agentOptions: {
-    //     identity,
-    //     host: this.host,
-    //   },
-    // });
 
     this.ledgerActor = createLedgerActor(ledgerCanisterId, {
       agentOptions: {
-        identity,
+        identity: this.stoicIdentity,
         host: this.host,
       },
     });
 
-    if (!extActor || !this.ledgerActor) {
+    if (!this.ledgerActor) {
       console.warn("couldn't create actors");
       return;
     }
 
     // the stoic agent provides an `accounts()` method that returns
     // accounts assocaited with the principal
-    let accounts = JSON.parse(await identity.accounts());
+    let accounts = JSON.parse(await this.stoicIdentity.accounts());
 
     this.state.update((state) => ({
       ...state,
-      // extActor,
-      principal: identity.getPrincipal(),
+      principal: this.stoicIdentity.getPrincipal(),
       accountId: accounts[0].address, // we take the default account associated with the identity
       isAuthed: "stoic",
     }));
@@ -201,22 +220,10 @@ class AuthStoreClass implements Readable<AuthState> {
       });
     }
 
-    const extActor = true;
-    // const extActor = (await window.ic?.plug.createActor({
-    //   canisterId: ledgerCanisterId,
-    //   interfaceFactory: extIdlFactory,
-    // })) as typeof ext;
-
-    if (!extActor) {
-      console.warn("couldn't create actors");
-      return;
-    }
-
     const principal = await window.ic.plug.agent.getPrincipal();
 
     this.state.update((state) => ({
       ...state,
-      // extActor,
       principal,
       accountId: window.ic.plug.sessionManager.sessionData.accountId,
       isAuthed: "plug",
@@ -250,20 +257,13 @@ class AuthStoreClass implements Readable<AuthState> {
   }
 
   async initBitfinity() {
-    const extActor = true;
-    // const extActor = (await window.ic.bitfinityWallet.createActor({
-    //   canisterId: ledgerCanisterId,
-    //   interfaceFactory: extIdlFactory,
-    //   host: this.host,
-    // })) as typeof ext;
-
     this.ledgerActor = (await window.ic.bitfinityWallet.createActor({
       canisterId: ledgerCanisterId,
       interfaceFactory: ledgerIdlFactory,
       host: this.host,
     })) as typeof ledger;
 
-    if (!extActor || !this.ledgerActor) {
+    if (!this.ledgerActor) {
       console.warn("couldn't create actors");
       return;
     }
@@ -273,7 +273,6 @@ class AuthStoreClass implements Readable<AuthState> {
 
     this.state.update((state) => ({
       ...state,
-      // extActor,
       principal,
       accountId,
       isAuthed: "bitfinity",
@@ -373,7 +372,7 @@ declare global {
         requestConnect: (options?: {
           whitelist?: string[];
           timeout?: number;
-        }) => Promise<{ derKey: Buffer; rawKey: Buffer }>;
+        }) => Promise<{ derKey: Uint8Array; rawKey: Uint8Array }>;
         isConnected: () => Promise<boolean>;
         createActor: (options: {
           canisterId: string;
