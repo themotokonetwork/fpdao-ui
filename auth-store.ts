@@ -73,13 +73,13 @@ class AuthStoreClass implements Readable<AuthState> {
     }
     else if (store.isAuthed === "plug") {
       return (await window.ic?.plug.createActor({
-        canisterId: ledgerCanisterId,
+        canisterId: canisterId,
         interfaceFactory: idlFactory,
       })) as T;
     }
     else if (store.isAuthed === "bitfinity") {
       return (await window.ic.bitfinityWallet.createActor({
-        canisterId: ledgerCanisterId,
+        canisterId: canisterId,
         interfaceFactory: idlFactory,
         host: this.host,
       })) as T;
