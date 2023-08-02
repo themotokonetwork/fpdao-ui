@@ -10,7 +10,7 @@ import {
   idlFactory as ledgerIdlFactory,
   canisterId as ledgerCanisterId,
 } from "./declarations/ledger";
-import {createActor} from 'create-actor';
+import {createActor} from './create-actor';
 
 export type AuthState = {
   isAuthed: "stoic" | "plug" | "bitfinity" | null;
