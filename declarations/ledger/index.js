@@ -4,12 +4,6 @@ import { Actor, HttpAgent } from "@dfinity/agent";
 import { idlFactory } from "./ledger.did.js";
 export { idlFactory } from "./ledger.did.js";
 
-// CANISTER_ID is replaced by webpack based on node environment
-export const canisterId =
-  process.env.DFX_NETWORK !== "ic"
-    ? process.env.LEDGER_CANISTER_ID
-    : "ryjl3-tyaaa-aaaaa-aaaba-cai";
-
 export const createActor = (canisterId, options = {}) => {
   const agent = options.agent || new HttpAgent({ ...options.agentOptions });
 
@@ -36,5 +30,3 @@ export const createActor = (canisterId, options = {}) => {
     ...options.actorOptions,
   });
 };
-
-export const ledger = createActor(canisterId);

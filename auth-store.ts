@@ -1,16 +1,15 @@
 import { writable, get, Writable, Readable, Updater, Subscriber, Invalidator, Unsubscriber } from "svelte/store";
 import type { Principal } from "@dfinity/principal";
-import { Actor, HttpAgent, Identity } from "@dfinity/agent";
+import { Actor, ActorSubclass, HttpAgent, Identity } from "@dfinity/agent";
 import { StoicIdentity } from "ic-stoic-identity";
 import { AccountIdentifier } from "@dfinity/nns";
 import { InterfaceFactory } from "@dfinity/candid/lib/cjs/idl";
 import {
-  ledger,
   createActor as createLedgerActor,
   idlFactory as ledgerIdlFactory,
-  canisterId as ledgerCanisterId,
 } from "./declarations/ledger";
-import {createActor} from './create-actor';
+import { _SERVICE as LedgerService } from "./declarations/ledger/ledger.did";
+import { createActor } from './create-actor';
 
 export type AuthState = {
   isAuthed: "stoic" | "plug" | "bitfinity" | null;
@@ -20,11 +19,15 @@ export type AuthState = {
   balance: number;
 };
 
+type LedgerActor = ActorSubclass<LedgerService>;
+
+let ledgerCanisterId = "ryjl3-tyaaa-aaaaa-aaaba-cai";
+
 class AuthStoreClass implements Readable<AuthState> {
   state: Writable<AuthState>;
   whitelist: string[] = [];
   host: string = '';
-  ledgerActor: typeof ledger;
+  ledgerActor: LedgerActor;
   stoicIdentity: Identity & { accounts(): string };
 
   constructor({ host, whitelist }: { host?: string; whitelist?: string[]; }) {
@@ -261,7 +264,7 @@ class AuthStoreClass implements Readable<AuthState> {
       canisterId: ledgerCanisterId,
       interfaceFactory: ledgerIdlFactory,
       host: this.host,
-    })) as typeof ledger;
+    })) as LedgerActor;
 
     if (!this.ledgerActor) {
       console.warn("couldn't create actors");
