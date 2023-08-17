@@ -141,8 +141,6 @@ class AuthStoreClass implements Readable<AuthState> {
   }
 
   async initStoic() {
-    console.trace("initStoic");
-
     this.ledgerActor = createLedgerActor(ledgerCanisterId, {
       agentOptions: {
         identity: this.stoicIdentity,
