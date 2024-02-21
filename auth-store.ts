@@ -2,7 +2,7 @@ import { writable, get, Writable, Readable, Updater, Subscriber, Invalidator, Un
 import type { Principal } from "@dfinity/principal";
 import { Actor, ActorSubclass, HttpAgent, Identity } from "@dfinity/agent";
 import { StoicIdentity } from "ic-stoic-identity";
-import { AccountIdentifier } from "@dfinity/nns";
+import { AccountIdentifier } from "@dfinity/ledger-icp";
 import { InterfaceFactory } from "@dfinity/candid/lib/cjs/idl";
 import {
   createActor as createLedgerActor,
