@@ -3,6 +3,7 @@
 
   export let toggleModal;
   export let title;
+  export let closable = true;
 </script>
 
 <div
@@ -12,7 +13,8 @@
     <div class="flex flex-row justify-between dark:text-white">
       <p class="font-everett-medium text-3xl 2xl:text-4xl">{title}</p>
       <div
-        class="hover:shadow dark:hover:shadow-white cursor-pointer flex justify-center items-center font-mono text-lg rounded-full border-2 border-black dark:border-white  w-10 h-10"
+        class="close-button hover:shadow dark:hover:shadow-white cursor-pointer flex justify-center items-center font-mono text-lg rounded-full border-2 border-black dark:border-white  w-10 h-10"
+        hidden={!closable}
         on:click={toggleModal}
       >
         x
@@ -23,3 +25,9 @@
     </div>
   </Card>
 </div>
+
+<style>
+  .close-button[hidden] {
+    display: none !important;
+  }
+</style>
