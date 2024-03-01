@@ -298,18 +298,18 @@ class AuthStoreClass implements Readable<AuthState> {
       let res = await this.ledgerActor.account_balance({
         account: AccountIdentifier.fromHex(store.accountId).toNumbers(),
       });
-      balance = Number(res.e8s / 100000000n);
+      balance = Number(res.e8s) / 1e8;
     } else if (store.isAuthed === "bitfinity") {
       if (process.env.DFX_NETWORK !== "ic") {
         let res = await this.ledgerActor.account_balance({
           account: AccountIdentifier.fromHex(store.accountId).toNumbers(),
         });
-        balance = Number(res.e8s / 100000000n);
+        balance = Number(res.e8s) / 1e8;
       } else {
         let result = await window.ic.bitfinityWallet.getUserAssets();
         let ICP = result.find((asset) => asset.symbol === "ICP");
         if (ICP) {
-          balance = Number(BigInt(ICP.balance) / 100000000n);
+          balance = Number(ICP.balance) / 1e8;
         }
       }
     }
