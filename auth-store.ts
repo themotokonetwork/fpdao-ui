@@ -260,7 +260,6 @@ class AuthStoreClass implements Readable<AuthState> {
     this.ledgerActor = (await window.ic.bitfinityWallet.createActor({
       canisterId: ledgerCanisterId,
       interfaceFactory: ledgerIdlFactory,
-      host: this.host,
     })) as LedgerActor;
 
     if (!this.ledgerActor) {
