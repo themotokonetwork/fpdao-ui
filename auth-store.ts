@@ -84,7 +84,6 @@ class AuthStoreClass implements Readable<AuthState> {
       return (await window.ic.bitfinityWallet.createActor({
         canisterId: canisterId,
         interfaceFactory: idlFactory,
-        host: this.host,
       })) as T;
     }
     else {
@@ -238,7 +237,7 @@ class AuthStoreClass implements Readable<AuthState> {
   async bitfinityConnect() {
     // check if bitfinity is installed in the browser
     if (window.ic?.bitfinityWallet === undefined) {
-      window.open("https://wallet.infinityswap.one/", "_blank");
+      window.open("https://https://wallet.bitfinity.network/", "_blank");
       return;
     }
 
@@ -378,7 +377,6 @@ declare global {
         createActor: (options: {
           canisterId: string;
           interfaceFactory: InterfaceFactory;
-          host: string;
         }) => Promise<Actor>;
         getPrincipal: () => Promise<Principal>;
         disconnect: () => Promise<boolean>;
