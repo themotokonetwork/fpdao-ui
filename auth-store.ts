@@ -287,10 +287,24 @@ class AuthStoreClass implements Readable<AuthState> {
     let balance: number = 0;
 
     if (store.isAuthed === "plug") {
-      let result = await window.ic.plug.requestBalance();
-      let ICP = result.find((asset) => asset.symbol === "ICP");
-      if (ICP) {
-        balance = ICP.amount;
+      // Create a ledger actor using Plug's agent
+      const ledgerActor = await this.createActor<LedgerActor>(
+        ledgerCanisterId,
+        ledgerIdlFactory
+      );
+
+      // Get the account ID from Plug
+      const accountId = store.accountId;
+
+      // Query the ledger directly for balance
+      try {
+        const res = await ledgerActor.account_balance({
+          account: AccountIdentifier.fromHex(accountId).toNumbers(),
+        });
+        balance = Number(res.e8s) / 1e8;
+      } catch (error) {
+        console.error("Error fetching balance from ledger:", error);
+        balance = 0;
       }
     } else if (store.isAuthed === "stoic") {
       let res = await this.ledgerActor.account_balance({
