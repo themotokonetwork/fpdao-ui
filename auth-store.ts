@@ -211,13 +211,15 @@ class AuthStoreClass implements Readable<AuthState> {
     }
 
     // Fetch root key for certificate validation during development
-    if (process.env.DFX_NETWORK !== "ic") {
-      await window.ic.plug.agent.fetchRootKey().catch((err) => {
-        console.warn(
-          "Unable to fetch root key. Check to ensure that your local replica is running"
-        );
-        console.error(err);
-      });
+   if (process.env.DFX_NETWORK !== "ic") {
+      try {
+        const fallbackAgent = new HttpAgent({ host: this.host });
+        await fallbackAgent.fetchRootKey();
+        console.log("Fetched root key via fallback HttpAgent.");
+      } catch (err) {
+        console.warn("Unable to fetch root key with fallback HttpAgent.");
+        if (process.env.NODE_ENV === "development") console.error(err);
+      }
     }
 
     const principal = await window.ic.plug.agent.getPrincipal();
